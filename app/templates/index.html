@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Imagem para PDF</title>
+<style>
+:root {
+  --red: #e53935;
+  --red-light: #fdecea;
+  --border: #ddd;
+}
+body {
+  margin: 0;
+  font-family: system-ui, Arial, sans-serif;
+  background: #f6f6f6;
+}
+header {
+  background: var(--red);
+  color: #fff;
+  padding: 16px 24px;
+}
+header a {
+  color: #fff;
+  font-weight: bold;
+  text-decoration: none;
+  font-size: 18px;
+}
+main {
+  max-width: 760px;
+  margin: 40px auto;
+  padding: 0 20px;
+}
+.card {
+  background: #fff;
+  border-radius: 8px;
+  padding: 30px;
+  box-shadow: 0 4px 14px rgba(0,0,0,.08);
+}
+.dropzone {
+  border: 2px dashed var(--border);
+  border-radius: 6px;
+  padding: 40px;
+  text-align: center;
+  cursor: pointer;
+}
+.dropzone.drag {
+  background: var(--red-light);
+  border-color: var(--red);
+}
+.preview {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 120px);
+  gap: 12px;
+  margin-top: 20px;
+}
+.item { position: relative; }
+.item img { width: 100%; border-radius: 4px; }
+.remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: var(--red);
+  color: #fff;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.controls { margin-top: 20px; }
+select, input {
+  padding: 8px;
+  width: 100%;
+  margin-top: 8px;
+}
+.counter { margin-top: 12px; font-size: 14px; }
+.error {
+  color: var(--red);
+  margin-top: 8px;
+  font-size: 14px;
+  display: none;
+}
+button.primary {
+  margin-top: 30px;
+  width: 100%;
+  padding: 14px;
+  background: var(--red);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+}
+</style>
+</head>
+<body>
+
+<header><a href="/" onclick="resetAll()">Imagem para PDF</a></header>
+
+<main>
+<div class="card">
+<input type="file" id="fileInput" multiple hidden accept="image/*">
+<div class="dropzone" id="dropzone">📁 Selecione imagens</div>
+<div class="counter" id="counter">0 / 10 arquivos (máx. 10 MB cada)</div>
+<div class="error" id="error"></div>
+<div class="preview" id="preview"></div>
+
+<div class="controls">
+<label>Tamanho da página</label>
+<select id="pageSize">
+<option value="ORIGINAL">Original</option>
+<option value="A4">A4</option>
+</select>
+<label>Qualidade do PDF</label>
+<select id="quality">
+<option value="high" selected>Maior</option>
+<option value="small">Menor</option>
+</select>
+<div id="marginBox" style="display:none">
+<label>Margem (mm)</label>
+<input type="number" id="margin" value="10" min="0" max="100">
+</div>
+</div>
+
+<button class="primary" onclick="convert()">Converter para PDF</button>
+</div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+const MAX = 10;
+const MAX_SIZE_MB = 10;
+const MAX_SIZE = MAX_SIZE_MB * 1024 * 1024;
+let files = [];
+
+const dz = document.getElementById("dropzone");
+const fi = document.getElementById("fileInput");
+const pv = document.getElementById("preview");
+const ct = document.getElementById("counter");
+const er = document.getElementById("error");
+const ps = document.getElementById("pageSize");
+const q = document.getElementById("quality");
+const mb = document.getElementById("marginBox");
+const margin = document.getElementById("margin");
+
+dz.onclick = () => fi.click();
+fi.onchange = () => add(fi.files);
+
+["dragenter", "dragover"].forEach(e => dz.addEventListener(e, ev => { ev.preventDefault(); dz.classList.add("drag") }));
+["dragleave", "drop"].forEach(e => dz.addEventListener(e, ev => { ev.preventDefault(); dz.classList.remove("drag") }));
+dz.addEventListener("drop", ev => add(ev.dataTransfer.files));
+
+function showError(msg) {
+  er.textContent = msg;
+  er.style.display = "block";
+  setTimeout(() => er.style.display = "none", 3000);
+}
+
+function add(list) {
+  for (const f of list) {
+    if (!f.type.startsWith("image/")) { showError("Arquivo não suportado"); fi.value = ""; continue }
+    if (f.size > MAX_SIZE) { showError(`Arquivo muito grande. Máximo ${MAX_SIZE_MB} MB por imagem.`); fi.value = ""; continue }
+    if (files.length >= MAX) { showError("Limite máximo atingido"); fi.value = ""; return }
+    files.push(f);
+  }
+  render();
+}
+
+function render() {
+  pv.innerHTML = "";
+  files.forEach((f, i) => {
+    const d = document.createElement("div");
+    d.className = "item";
+    const img = document.createElement("img");
+    img.src = URL.createObjectURL(f);
+    const btn = document.createElement("button");
+    btn.className = "remove";
+    btn.textContent = "×";
+    btn.onclick = () => { files.splice(i, 1); render() };
+    d.append(img, btn);
+    pv.append(d);
+  });
+  ct.textContent = `${files.length} / ${MAX} arquivos`;
+}
+
+new Sortable(pv, { animation: 150, onEnd: e => {
+  const m = files.splice(e.oldIndex, 1)[0];
+  files.splice(e.newIndex, 0, m);
+}});
+
+ps.onchange = () => mb.style.display = ps.value === "A4" ? "block" : "none";
+
+function convert() {
+  if (!files.length) return;
+  const fd = new FormData();
+  files.forEach(f => fd.append("files", f));
+  fd.append("page_size", ps.value);
+  fd.append("margin", margin.value);
+  fd.append("quality", q.value);
+
+  const defaultName = files.length === 1 ? files[0].name.replace(/\.[^/.]+$/, "") + ".pdf" : "imagens_para_pdf.pdf";
+
+  fetch("/convert", { method: "POST", body: fd })
+    .then(async r => {
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error(err.detail || "Erro ao converter");
+      }
+      return r.blob();
+    })
+    .then(blob => {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = defaultName;
+      a.click();
+      resetAll();
+    })
+    .catch(e => showError(e.message || "Erro ao converter"));
+}
+
+function resetAll() {
+  files = [];
+  render();
+  mb.style.display = "none";
+  ps.value = "ORIGINAL";
+  q.value = "high";
+  fi.value = "";
+}
+</script>
+
+</body>
+</html>
