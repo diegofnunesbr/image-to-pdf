@@ -1,8 +1,12 @@
+import logging
+
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, Response
 from fastapi.templating import Jinja2Templates
 
 from app.converter import images_to_pdf
+
+logging.getLogger("img2pdf").setLevel(logging.WARNING)
 
 app = FastAPI()
 A4_MAX_MARGIN_MM = 100
@@ -14,6 +18,11 @@ templates = Jinja2Templates(directory="app/templates")
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.get("/favicon.ico")
+async def favicon():
+    return Response(status_code=204)
 
 
 @app.get("/", response_class=HTMLResponse)
