@@ -2,9 +2,12 @@
 .gitignore
 __pycache__
 *.pyc
+*.pyo
 .venv
 venv
 .env
 .idea
 .vscode
 *.md
+*.log
+.DS_Store
