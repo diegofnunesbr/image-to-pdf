@@ -1,4 +1,5 @@
 import logging
+import os
 import threading
 from pathlib import Path
 
@@ -15,11 +16,22 @@ logging.basicConfig(level=logging.INFO)
 
 app = FastAPI()
 
-A4_MAX_MARGIN_MM = 100
-MAX_FILE_SIZE_MB = 10
-MAX_FILE_SIZE = MAX_FILE_SIZE_MB * 1024 * 1024
 
-MAX_TOTAL_MB = 100
+def _env_int(name: str, default: int) -> int:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    try:
+        parsed = int(value)
+        return parsed if parsed > 0 else default
+    except ValueError:
+        return default
+
+
+A4_MAX_MARGIN_MM = _env_int("A4_MAX_MARGIN_MM", 100)
+MAX_FILE_SIZE_MB = _env_int("MAX_FILE_SIZE_MB", 10)
+MAX_FILE_SIZE = MAX_FILE_SIZE_MB * 1024 * 1024
+MAX_TOTAL_MB = _env_int("MAX_TOTAL_MB", 100)
 MAX_TOTAL_SIZE = MAX_TOTAL_MB * 1024 * 1024
 
 stats = {"conversions": 0, "images": 0}
@@ -45,7 +57,15 @@ async def favicon():
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(
+        "index.html",
+        {
+            "request": request,
+            "max_file_size_mb": MAX_FILE_SIZE_MB,
+            "max_total_mb": MAX_TOTAL_MB,
+            "a4_max_margin_mm": A4_MAX_MARGIN_MM,
+        },
+    )
 
 
 @app.post("/convert")

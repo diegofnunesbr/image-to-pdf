@@ -48,9 +48,26 @@ uvicorn app.main:app --reload
 - Nenhum dado é armazenado
 - Processamento em memória
 
+## Variáveis de ambiente
+
+| Variável | Padrão | Descrição |
+|----------|--------|-----------|
+| `MAX_FILE_SIZE_MB` | 10 | Tamanho máximo por imagem (MB) |
+| `MAX_TOTAL_MB` | 100 | Tamanho total máximo (MB) |
+| `A4_MAX_MARGIN_MM` | 100 | Margem máxima para A4 (mm) |
+
 ## Como rodar com Docker
 
 ```bash
 docker build -t image-to-pdf .
-docker run -p 8000:8000 image-to-pdf
+docker run -d -p 8000:8000 \
+  --restart unless-stopped \
+  --name image-to-pdf \
+  image-to-pdf
+```
+
+## Consultar os logs
+
+```bash
+docker logs -f image-to-pdf
 ```

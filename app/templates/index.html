@@ -132,7 +132,7 @@ font-size:14px;
 
 <div class="dropzone" id="dropzone">📁 Selecione imagens ou arraste aqui</div>
 
-<div class="counter" id="counter">0 / 10 arquivos (máx. 10 MB cada)</div>
+<div class="counter" id="counter">0 / 10 arquivos (máx. {{ max_file_size_mb | default(10) }} MB cada, {{ max_total_mb | default(100) }} MB total)</div>
 
 <div class="error" id="error"></div>
 
@@ -155,7 +155,7 @@ font-size:14px;
 
 <div id="marginBox" style="display:none">
 <label>Margem (mm)</label>
-<input type="number" id="margin" value="10" min="0" max="100">
+<input type="number" id="margin" value="10" min="0" max="{{ a4_max_margin_mm | default(100) }}">
 </div>
 
 </div>
@@ -175,8 +175,10 @@ font-size:14px;
 <script>
 
 const MAX=10
-const MAX_SIZE_MB=10
+const MAX_SIZE_MB={{ max_file_size_mb | default(10) }}
+const MAX_TOTAL_MB={{ max_total_mb | default(100) }}
 const MAX_SIZE=MAX_SIZE_MB*1024*1024
+const MAX_TOTAL_SIZE=MAX_TOTAL_MB*1024*1024
 
 let files=[]
 let previewUrls=[]
@@ -224,6 +226,8 @@ setTimeout(()=>er.style.display="none",3000)
 
 function add(list){
 
+let runningTotal=files.reduce((s,f)=>s+f.size,0)
+
 for(const f of list){
 
 if(!f.type.startsWith("image/")){
@@ -241,7 +245,13 @@ showError("Limite máximo atingido")
 return
 }
 
+if(runningTotal+f.size>MAX_TOTAL_SIZE){
+showError(`Tamanho total excede ${MAX_TOTAL_MB} MB.`)
+return
+}
+
 files.push(f)
+runningTotal+=f.size
 
 }
 
@@ -288,9 +298,9 @@ pv.append(d)
 const totalMB=Math.round(total/1024/1024)
 
 if(files.length===0){
-ct.textContent=`0 / ${MAX} arquivos (máx. ${MAX_SIZE_MB} MB cada)`
+ct.textContent=`0 / ${MAX} arquivos (máx. ${MAX_SIZE_MB} MB cada, ${MAX_TOTAL_MB} MB total)`
 }else{
-ct.textContent=`${files.length} / ${MAX} arquivos (máx. ${MAX_SIZE_MB} MB cada) • ${totalMB} MB selecionados`
+ct.textContent=`${files.length} / ${MAX} arquivos (máx. ${MAX_SIZE_MB} MB cada, ${MAX_TOTAL_MB} MB total) • ${totalMB} MB selecionados`
 }
 
 }
