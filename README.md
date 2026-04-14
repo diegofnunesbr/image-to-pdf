@@ -71,3 +71,9 @@ docker run -d -p 8000:8000 \
 ```bash
 docker logs -f image-to-pdf
 ```
+
+## Parar e remover o container
+
+```bash
+docker rm -f image-to-pdf
+```
