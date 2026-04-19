@@ -15,7 +15,6 @@ Aplicação web para converter imagens em PDF, com suporte a:
 ```text
 image-to-pdf/
 ├── app/
-│   ├── __init__.py
 │   ├── main.py
 │   ├── converter.py
 │   └── templates/
