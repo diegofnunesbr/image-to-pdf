@@ -3,9 +3,8 @@ import os
 import threading
 from pathlib import Path
 
-from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import HTMLResponse, Response
-from fastapi.templating import Jinja2Templates
 
 from app.converter import images_to_pdf
 
@@ -37,7 +36,16 @@ MAX_TOTAL_SIZE = MAX_TOTAL_MB * 1024 * 1024
 stats = {"conversions": 0, "images": 0}
 _stats_lock = threading.Lock()
 
-templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
+_INDEX_HTML_PATH = Path(__file__).parent / "templates" / "index.html"
+
+
+def _index_html() -> str:
+    raw = _INDEX_HTML_PATH.read_text(encoding="utf-8")
+    return (
+        raw.replace("__MAX_FILE_SIZE_MB__", str(MAX_FILE_SIZE_MB))
+        .replace("__MAX_TOTAL_MB__", str(MAX_TOTAL_MB))
+        .replace("__A4_MAX_MARGIN_MM__", str(A4_MAX_MARGIN_MM))
+    )
 
 
 @app.get("/health")
@@ -56,16 +64,8 @@ async def favicon():
 
 
 @app.get("/", response_class=HTMLResponse)
-async def index(request: Request):
-    return templates.TemplateResponse(
-        request=request,
-        name="index.html",
-        context={
-            "max_file_size_mb": MAX_FILE_SIZE_MB,
-            "max_total_mb": MAX_TOTAL_MB,
-            "a4_max_margin_mm": A4_MAX_MARGIN_MM,
-        },
-    )
+async def index():
+    return HTMLResponse(content=_index_html())
 
 
 @app.post("/convert")
