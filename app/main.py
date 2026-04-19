@@ -58,9 +58,9 @@ async def favicon():
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     return templates.TemplateResponse(
-        "index.html",
-        {
-            "request": request,
+        request=request,
+        name="index.html",
+        context={
             "max_file_size_mb": MAX_FILE_SIZE_MB,
             "max_total_mb": MAX_TOTAL_MB,
             "a4_max_margin_mm": A4_MAX_MARGIN_MM,
