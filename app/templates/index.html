@@ -158,6 +158,14 @@ font-size:14px;
 <input type="number" id="margin" value="10" min="0" max="__A4_MAX_MARGIN_MM__">
 </div>
 
+<div id="modeBox" style="display:none">
+<label>Modo de saída</label>
+<select id="mergeMode">
+<option value="merge">Mesclar em um único PDF</option>
+<option value="individual">Um PDF por imagem (nome original)</option>
+</select>
+</div>
+
 </div>
 
 <button class="primary" id="convertBtn" onclick="convert()">Converter para PDF</button>
@@ -198,6 +206,8 @@ const progressBar=document.getElementById("progressBar")
 const progressText=document.getElementById("progressText")
 
 const convertBtn=document.getElementById("convertBtn")
+const modeBox=document.getElementById("modeBox")
+const mm=document.getElementById("mergeMode")
 
 dz.addEventListener("click",()=>fi.click())
 
@@ -303,6 +313,8 @@ ct.textContent=`0 / ${MAX} arquivos (máx. ${MAX_SIZE_MB} MB cada, ${MAX_TOTAL_M
 ct.textContent=`${files.length} / ${MAX} arquivos (máx. ${MAX_SIZE_MB} MB cada, ${MAX_TOTAL_MB} MB total) • ${totalMB} MB selecionados`
 }
 
+modeBox.style.display=files.length>1?"block":"none"
+
 }
 
 new Sortable(pv,{
@@ -317,9 +329,59 @@ ps.onchange=()=>{
 mb.style.display=ps.value==="A4"?"block":"none"
 }
 
+async function convertIndividual(){
+
+convertBtn.disabled=true
+progressBox.style.display="block"
+progressBar.value=0
+
+const total=files.length
+
+for(let i=0;i<total;i++){
+
+const f=files[i]
+progressText.textContent=`Convertendo ${i+1} de ${total}: ${f.name}`
+progressBar.value=Math.round((i/total)*100)
+
+const fd=new FormData()
+fd.append("files",f)
+fd.append("page_size",ps.value)
+fd.append("margin",margin.value)
+fd.append("quality",q.value)
+
+try{
+
+const res=await fetch("/convert",{method:"POST",body:fd})
+
+if(!res.ok){
+let msg="Erro ao converter"
+try{const json=await res.json();if(json.detail)msg=Array.isArray(json.detail)?json.detail.map(d=>d.msg||d).join(", "):String(json.detail)}catch{}
+showError(`${f.name}: ${msg}`)
+continue
+}
+
+const blob=await res.blob()
+const a=document.createElement("a")
+a.href=URL.createObjectURL(blob)
+a.download=f.name.replace(/\.[^/.]+$/,"")+".pdf"
+a.click()
+URL.revokeObjectURL(a.href)
+
+}catch{showError(`${f.name}: Erro na conversão`)}
+
+}
+
+progressBar.value=100
+progressText.textContent=`${total} PDF${total>1?"s":""} gerados`
+setTimeout(()=>{resetAll()},1500)
+
+}
+
 function convert(){
 
 if(!files.length)return
+
+if(files.length>1&&mm.value==="individual"){convertIndividual();return}
 
 const fd=new FormData()
 
@@ -431,6 +493,7 @@ mb.style.display="none"
 ps.value="ORIGINAL"
 q.value="high"
 margin.value=10
+mm.value="merge"
 fi.value=""
 progressBox.style.display="none"
 convertBtn.disabled=false
